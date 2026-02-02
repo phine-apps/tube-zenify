@@ -1,0 +1,225 @@
+{
+  "extensionName": {
+    "message": "TubeZenify",
+    "description": "Name of the extension"
+  },
+  "extensionDescription": {
+    "message": "让您的订阅列表井井有条，享受 Zen 模式。",
+    "description": "Description of the extension"
+  },
+  "folderUncategorized": {
+    "message": "未分类",
+    "description": "Default folder for new channels"
+  },
+  "folderNew": {
+    "message": "新建文件夹",
+    "description": "Default name for new user created folders"
+  },
+  "searchPlaceholder": {
+    "message": "搜索频道...",
+    "description": "Placeholder text for search input"
+  },
+  "promptNewFolderName": {
+    "message": "输入文件夹名称：",
+    "description": "Label for folder name prompt"
+  },
+  "errorDuplicateFolder": {
+    "message": "该名称的文件夹已存在。",
+    "description": "Error message when folder name is taken"
+  },
+  "confirmDeleteFolder": {
+    "message": "确定要删除此文件夹吗？其中的频道将移至“未分类”。",
+    "description": "Confirmation prompt before deleting a folder"
+  },
+  "confirmImportSwaps": {
+    "message": "导入将覆盖您当前的文件夹结构。是否继续？",
+    "description": "Confirmation prompt before importing settings"
+  },
+  "importSuccess": {
+    "message": "导入成功！",
+    "description": "Success message after import"
+  },
+  "importFailed": {
+    "message": "导入失败：",
+    "description": "Error message prefix when import fails"
+  },
+  "noFolders": {
+    "message": "创建文件夹以开始整理",
+    "description": "Empty state message for folder list"
+  },
+  "menuReload": {
+    "message": "重新加载扩展",
+    "description": "Menu item to reload the extension page"
+  },
+  "menuExport": {
+    "message": "导出设置",
+    "description": "Menu item to export settings"
+  },
+  "menuImport": {
+    "message": "导入设置",
+    "description": "Menu item to import settings"
+  },
+  "statusSideBarNotDetected": {
+    "message": "无法访问 YouTube 数据。",
+    "description": "Status message when YouTube data is not found"
+  },
+  "statusConnectionFailed": {
+    "message": "连接失败",
+    "description": "Status message when extension cannot connect to tab"
+  },
+  "statusOpeningYouTube": {
+    "message": "正在打开 YouTube 以获取频道...",
+    "description": "Status message while waiting for YouTube tab"
+  },
+  "statusNoChannelsFound": {
+    "message": "已连接，但页面上未找到频道。",
+    "description": "Status message when no channels are scraped"
+  },
+  "statusNotYouTube": {
+    "message": "不是 YouTube 标签页或页面未加载。",
+    "description": "Status message when current tab is not YouTube"
+  },
+  "errorConnection": {
+    "message": "TubeZenify 连接错误：",
+    "description": "Header for connection errors"
+  },
+  "statusAllCaughtUp": {
+    "message": "全部处理完毕！",
+    "description": "Message shown when all channels are categorized"
+  },
+  "renameFolder": {
+    "message": "重命名",
+    "description": "Action to rename a folder"
+  },
+  "deleteFolder": {
+    "message": "删除",
+    "description": "Action to delete a folder"
+  },
+  "menuSettings": {
+    "message": "设置",
+    "description": "Action to open settings menu"
+  },
+  "badgeLive": {
+    "message": "直播中",
+    "description": "Label for live streams"
+  },
+  "errorBoundaryTitle": {
+    "message": "出错了",
+    "description": "Title for the error screen"
+  },
+  "errorBoundaryDescription": {
+    "message": "可能需要刷新数据。请重新加载扩展。",
+    "description": "Instructions for the user on the error screen"
+  },
+  "errorBoundaryReload": {
+    "message": "重新加载扩展",
+    "description": "Button to reload the extension on the error screen"
+  },
+  "noSearchResults": {
+    "message": "未找到匹配的频道。",
+    "description": "Message shown when search returns no results"
+  },
+  "expandAll": {
+    "message": "全部展开",
+    "description": "Button to expand all folders"
+  },
+  "collapseAll": {
+    "message": "全部收起",
+    "description": "Button to collapse all folders"
+  },
+  "errorLoadFolders": {
+    "message": "加载文件夹失败",
+    "description": "Error message when folder loading fails"
+  },
+  "errorSaveFolders": {
+    "message": "保存文件夹失败",
+    "description": "Error message when folder saving fails"
+  },
+  "errorTabClosed": {
+    "message": "YouTube 标签页已关闭。请通过齿轮图标重新加载。",
+    "description": "Error message when the YouTube tab is closed during connection"
+  },
+  "badgeNewContent": {
+    "message": "新内容",
+    "description": "Label for channels with new content"
+  },
+  "cancel": {
+    "message": "取消",
+    "description": "Label for cancel button"
+  },
+  "create": {
+    "message": "创建",
+    "description": "Label for create button"
+  },
+  "dismiss": {
+    "message": "关闭",
+    "description": "Label for dismiss/close button"
+  },
+  "storageUsageInfo": {
+    "message": "存储使用量：$PERCENTAGE$% ($SIZE$ / $LIMIT$)。请考虑减少文件夹或频道。",
+    "description": "Info message about storage usage",
+    "placeholders": {
+      "PERCENTAGE": { "content": "$1" },
+      "SIZE": { "content": "$2" },
+      "LIMIT": { "content": "$3" }
+    }
+  },
+  "statusMigrating": {
+    "message": "正在迁移数据...",
+    "description": "Status message while migrating data between identities"
+  },
+  "statusLoading": {
+    "message": "正在加载您的空间...",
+    "description": "Status message while initial data is loading"
+  },
+  "statusLoginRequired": {
+    "message": "需要登录 YouTube。",
+    "description": "Status message when user is not logged in"
+  },
+  "actionRetry": {
+    "message": "重试",
+    "description": "Action to retry connection"
+  },
+  "actionOpenYouTube": {
+    "message": "打开 YouTube",
+    "description": "Action to open/focus YouTube tab"
+  },
+  "statusConnectionFailedDetail": {
+    "message": "连接失败。请检查 YouTube 是否已打开。",
+    "description": "Detailed error message when connection fails"
+  },
+  "syncStatus": {
+    "message": "同步状态"
+  },
+  "syncEnabled": {
+    "message": "云同步 已开启"
+  },
+  "syncDisabled": {
+    "message": "仅限本地存储"
+  },
+  "menuAbout": {
+    "message": "关于 TubeZenify"
+  },
+  "aboutTitle": {
+    "message": "关于 TubeZenify"
+  },
+  "aboutDisclaimer": {
+    "message": "TubeZenify 是一个非官方扩展，与 YouTube™ 无关。"
+  },
+  "aboutWarranty": {
+    "message": "由于 YouTube 的更新，功能可能会更改或失效。"
+  },
+  "aboutPrivacy": {
+    "message": "所有数据仅在您的设备上通过您的个人 Google 帐户存储进行处理。"
+  },
+  "labelMaintenance": {
+    "message": "维护"
+  },
+  "labelLocalBackup": {
+    "message": "本地备份"
+  },
+  "labelInfo": {
+    "message": "信息"
+  }
+}
+

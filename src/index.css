@@ -1,0 +1,59 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-zen-bg: var(--zen-bg);
+  --color-zen-surface: var(--zen-surface);
+  --color-zen-primary: var(--zen-text-secondary);
+  --color-zen-accent: var(--zen-accent);
+  --color-zen-text: var(--zen-text);
+  --color-zen-muted: var(--zen-muted);
+  --color-zen-live: var(--zen-live);
+  --color-zen-border: var(--zen-border);
+
+  --animate-fade-in: fadeIn 0.3s ease-in-out;
+  --animate-slide-up: slideUp 0.3s ease-out;
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+  @keyframes fadeIn {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+  @keyframes slideUp {
+    0% {
+      transform: translateY(10px);
+      opacity: 0;
+    }
+    100% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+}
+
+:root {
+  --zen-bg: #f9fafb;
+  --zen-surface: #ffffff;
+  --zen-text: #374151;
+  --zen-text-secondary: #4b5563;
+  --zen-muted: #9ca3af;
+  --zen-border: #e5e7eb;
+  --zen-accent: #8b5cf6;
+  --zen-live: #ef4444;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --zen-bg: #111827; /* gray-900 */
+    --zen-surface: #1f2937; /* gray-800 */
+    --zen-text: #e5e7eb; /* gray-200 */
+    --zen-text-secondary: #9ca3af; /* gray-400 */
+    --zen-muted: #6b7280; /* gray-500 */
+    --zen-border: #374151; /* gray-700 */
+    --zen-accent: #a78bfa; /* violet-400 */
+    --zen-live: #f87171; /* red-400 */
+  }
+}

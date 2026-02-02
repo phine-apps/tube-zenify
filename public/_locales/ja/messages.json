@@ -1,0 +1,180 @@
+{
+  "extensionName": {
+    "message": "TubeZenify"
+  },
+  "extensionDescription": {
+    "message": "登録チャンネルを整理して、視聴環境を整えましょう。"
+  },
+  "folderUncategorized": {
+    "message": "未分類"
+  },
+  "folderNew": {
+    "message": "新規フォルダ"
+  },
+  "searchPlaceholder": {
+    "message": "チャンネルを検索..."
+  },
+  "promptNewFolderName": {
+    "message": "フォルダ名を入力してください:"
+  },
+  "errorDuplicateFolder": {
+    "message": "その名前のフォルダは既に存在します。"
+  },
+  "confirmDeleteFolder": {
+    "message": "このフォルダを削除しますか？ 中身は「未分類」に移動されます。"
+  },
+  "confirmImportSwaps": {
+    "message": "インポートすると現在のフォルダ構成が上書きされます。よろしいですか？"
+  },
+  "importSuccess": {
+    "message": "インポートが完了しました！"
+  },
+  "importFailed": {
+    "message": "インポートに失敗しました: "
+  },
+  "noFolders": {
+    "message": "フォルダを作成して整理を始めましょう"
+  },
+  "menuReload": {
+    "message": "拡張機能をリロード"
+  },
+  "menuExport": {
+    "message": "設定をエクスポート"
+  },
+  "menuImport": {
+    "message": "設定をインポート"
+  },
+  "statusSideBarNotDetected": {
+    "message": "YouTubeのデータにアクセスできません。"
+  },
+  "statusConnectionFailed": {
+    "message": "接続に失敗しました"
+  },
+  "statusOpeningYouTube": {
+    "message": "チャンネル取得のためYouTubeを開いています..."
+  },
+  "statusNoChannelsFound": {
+    "message": "接続しましたが、チャンネルが見つかりませんでした。"
+  },
+  "statusLoginRequired": {
+    "message": "YouTubeへのログインが必要です。"
+  },
+  "actionRetry": {
+    "message": "再試行"
+  },
+  "actionOpenYouTube": {
+    "message": "YouTubeを開く"
+  },
+  "statusConnectionFailedDetail": {
+    "message": "接続に失敗しました。YouTubeが開いているか確認してください。"
+  },
+  "statusNotYouTube": {
+    "message": "YouTubeタブではない、またはページが読み込まれていません。"
+  },
+  "errorConnection": {
+    "message": "TubeZenify 接続エラー:"
+  },
+  "statusAllCaughtUp": {
+    "message": "すべて完了しました！"
+  },
+  "renameFolder": {
+    "message": "名前を変更"
+  },
+  "deleteFolder": {
+    "message": "削除"
+  },
+  "menuSettings": {
+    "message": "設定"
+  },
+  "badgeLive": {
+    "message": "ライブ配信中"
+  },
+  "errorBoundaryTitle": {
+    "message": "エラーが発生しました"
+  },
+  "errorBoundaryDescription": {
+    "message": "データの更新が必要かもしれません。拡張機能を再読み込みしてください。"
+  },
+  "errorBoundaryReload": {
+    "message": "拡張機能を再読み込み"
+  },
+  "noSearchResults": {
+    "message": "該当するチャンネルが見つかりませんでした。"
+  },
+  "expandAll": {
+    "message": "すべて展開"
+  },
+  "collapseAll": {
+    "message": "すべて折りたたむ"
+  },
+  "errorLoadFolders": {
+    "message": "フォルダの読み込みに失敗しました"
+  },
+  "errorSaveFolders": {
+    "message": "フォルダの保存に失敗しました"
+  },
+  "errorTabClosed": {
+    "message": "YouTubeのタブが閉じられました。歯車アイコンからリロードしてください。"
+  },
+  "badgeNewContent": {
+    "message": "新しいコンテンツ"
+  },
+  "cancel": {
+    "message": "キャンセル"
+  },
+  "create": {
+    "message": "作成"
+  },
+  "dismiss": {
+    "message": "閉じる"
+  },
+  "storageUsageInfo": {
+    "message": "ストレージ使用量: $PERCENTAGE$% ($SIZE$ / $LIMIT$)。フォルダやチャンネルを減らすことを検討してください。",
+    "placeholders": {
+      "PERCENTAGE": { "content": "$1" },
+      "SIZE": { "content": "$2" },
+      "LIMIT": { "content": "$3" }
+    }
+  },
+  "statusMigrating": {
+    "message": "データを移行しています..."
+  },
+  "statusLoading": {
+    "message": "スペースを読み込んでいます..."
+  },
+  "syncStatus": {
+    "message": "同期ステータス"
+  },
+  "syncEnabled": {
+    "message": "クラウド同期 有効"
+  },
+  "syncDisabled": {
+    "message": "ローカル保存のみ"
+  },
+  "menuAbout": {
+    "message": "TubeZenifyについて"
+  },
+  "aboutTitle": {
+    "message": "TubeZenifyについて"
+  },
+  "aboutDisclaimer": {
+    "message": "TubeZenifyは非公式の拡張機能であり、YouTube™ とは提携していません。"
+  },
+  "aboutWarranty": {
+    "message": "YouTubeの仕様変更に伴い、機能が利用できなくなる可能性があります。"
+  },
+  "aboutPrivacy": {
+    "message": "すべてのデータは、お使いのデバイスおよび個人のGoogleアカウントストレージを介して処理されます。"
+  },
+  "labelMaintenance": {
+    "message": "メンテナンス"
+  },
+  "labelLocalBackup": {
+    "message": "ローカルバックアップ"
+  },
+  "labelInfo": {
+    "message": "情報"
+  }
+}
+
+

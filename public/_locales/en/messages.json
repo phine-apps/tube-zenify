@@ -1,0 +1,237 @@
+{
+  "extensionName": {
+    "message": "TubeZenify",
+    "description": "Name of the extension"
+  },
+  "extensionDescription": {
+    "message": "Does your subscription feed spark joy? Zenify it now.",
+    "description": "Description of the extension"
+  },
+  "folderUncategorized": {
+    "message": "Uncategorized",
+    "description": "Default folder for new channels"
+  },
+  "folderNew": {
+    "message": "New Folder",
+    "description": "Default name for new user created folders"
+  },
+  "searchPlaceholder": {
+    "message": "Filter channels...",
+    "description": "Placeholder text for search input"
+  },
+  "promptNewFolderName": {
+    "message": "Enter folder name:",
+    "description": "Label for folder name prompt"
+  },
+  "errorDuplicateFolder": {
+    "message": "A folder with this name already exists.",
+    "description": "Error message when folder name is taken"
+  },
+  "confirmDeleteFolder": {
+    "message": "Delete this folder? Channels will be moved to Uncategorized.",
+    "description": "Confirmation prompt before deleting a folder"
+  },
+  "confirmImportSwaps": {
+    "message": "Importing will overwrite your current folder structure. Continue?",
+    "description": "Confirmation prompt before importing settings"
+  },
+  "importSuccess": {
+    "message": "Import successful!",
+    "description": "Success message after import"
+  },
+  "importFailed": {
+    "message": "Failed to import: ",
+    "description": "Error message prefix when import fails"
+  },
+  "noFolders": {
+    "message": "Create a folder to start organizing",
+    "description": "Empty state message for folder list"
+  },
+  "menuReload": {
+    "message": "Reload Extension",
+    "description": "Menu item to reload the extension page"
+  },
+  "menuExport": {
+    "message": "Export Settings",
+    "description": "Menu item to export settings"
+  },
+  "menuImport": {
+    "message": "Import Settings",
+    "description": "Menu item to import settings"
+  },
+  "statusSideBarNotDetected": {
+    "message": "YouTube data not detected.",
+    "description": "Status message when YouTube data is not found"
+  },
+  "statusConnectionFailed": {
+    "message": "Connection failed",
+    "description": "Status message when extension cannot connect to tab"
+  },
+  "statusOpeningYouTube": {
+    "message": "Opening YouTube to fetch channels...",
+    "description": "Status message while waiting for YouTube tab"
+  },
+  "statusNoChannelsFound": {
+    "message": "Connected, but no channels found on page.",
+    "description": "Status message when no channels are scraped"
+  },
+  "statusLoginRequired": {
+    "message": "Login to YouTube required.",
+    "description": "Status message when user is not logged in"
+  },
+  "actionRetry": {
+    "message": "Retry",
+    "description": "Action to retry connection"
+  },
+  "actionOpenYouTube": {
+    "message": "Open YouTube",
+    "description": "Action to open/focus YouTube tab"
+  },
+  "statusConnectionFailedDetail": {
+    "message": "Connection failed. Please check if YouTube is open.",
+    "description": "Detailed error message when connection fails"
+  },
+  "statusNotYouTube": {
+    "message": "Not a YouTube tab or page not loaded.",
+    "description": "Status message when current tab is not YouTube"
+  },
+  "errorConnection": {
+    "message": "TubeZenify Connection Error:",
+    "description": "Header for connection errors"
+  },
+  "statusAllCaughtUp": {
+    "message": "All caught up!",
+    "description": "Message shown when all channels are categorized"
+  },
+  "renameFolder": {
+    "message": "Rename",
+    "description": "Action to rename a folder"
+  },
+  "deleteFolder": {
+    "message": "Delete",
+    "description": "Action to delete a folder"
+  },
+  "menuSettings": {
+    "message": "Settings",
+    "description": "Action to open settings menu"
+  },
+  "badgeLive": {
+    "message": "Live now",
+    "description": "Label for live streams"
+  },
+  "errorBoundaryTitle": {
+    "message": "Something went wrong",
+    "description": "Title for the error screen"
+  },
+  "errorBoundaryDescription": {
+    "message": "Refreshed data might be needed. Please reload the extension.",
+    "description": "Instructions for the user on the error screen"
+  },
+  "errorBoundaryReload": {
+    "message": "Reload Extension",
+    "description": "Button to reload the extension on the error screen"
+  },
+  "noSearchResults": {
+    "message": "No matching channels found.",
+    "description": "Message shown when search returns no results"
+  },
+  "expandAll": {
+    "message": "Expand All",
+    "description": "Button to expand all folders"
+  },
+  "collapseAll": {
+    "message": "Collapse All",
+    "description": "Button to collapse all folders"
+  },
+  "errorLoadFolders": {
+    "message": "Failed to load folders",
+    "description": "Error message when folder loading fails"
+  },
+  "errorSaveFolders": {
+    "message": "Failed to save folders",
+    "description": "Error message when folder saving fails"
+  },
+  "errorTabClosed": {
+    "message": "YouTube tab was closed. Please reload from the gear icon.",
+    "description": "Error message when the YouTube tab is closed during connection"
+  },
+  "badgeNewContent": {
+    "message": "New content",
+    "description": "Label for channels with new content"
+  },
+  "cancel": {
+    "message": "Cancel",
+    "description": "Label for cancel button"
+  },
+  "create": {
+    "message": "Create",
+    "description": "Label for create button"
+  },
+  "dismiss": {
+    "message": "Dismiss",
+    "description": "Label for dismiss/close button"
+  },
+  "storageUsageInfo": {
+    "message": "Storage usage: $PERCENTAGE$% ($SIZE$ / $LIMIT$). Consider reducing folders or channels.",
+    "description": "Info message about storage usage",
+    "placeholders": {
+      "PERCENTAGE": { "content": "$1" },
+      "SIZE": { "content": "$2" },
+      "LIMIT": { "content": "$3" }
+    }
+  },
+  "statusMigrating": {
+    "message": "Migrating your data...",
+    "description": "Status message while migrating data between identities"
+  },
+  "statusLoading": {
+    "message": "Loading your space...",
+    "description": "Status message while initial data is loading"
+  },
+  "syncStatus": {
+    "message": "Sync Status",
+    "description": "Label for synchronization status"
+  },
+  "syncEnabled": {
+    "message": "Cloud Sync Active",
+    "description": "Status message when cloud sync is active"
+  },
+  "syncDisabled": {
+    "message": "Local Storage Only",
+    "description": "Status message when data is only stored locally"
+  },
+  "menuAbout": {
+    "message": "About",
+    "description": "Menu item to open the about modal"
+  },
+  "aboutTitle": {
+    "message": "About TubeZenify",
+    "description": "Title of the about modal"
+  },
+  "aboutDisclaimer": {
+    "message": "TubeZenify is an unofficial extension and is not affiliated with YouTube™.",
+    "description": "Disclaimer text"
+  },
+  "aboutWarranty": {
+    "message": "Features may change or break due to YouTube updates.",
+    "description": "Warranty disclaimer"
+  },
+  "aboutPrivacy": {
+    "message": "All data is processed on your device and via your personal Google account storage.",
+    "description": "Privacy note"
+  },
+  "labelMaintenance": {
+    "message": "Maintenance",
+    "description": "Label for maintenance section in settings"
+  },
+  "labelLocalBackup": {
+    "message": "Local Backup",
+    "description": "Label for backup section in settings"
+  },
+  "labelInfo": {
+    "message": "Info",
+    "description": "Label for info section in settings"
+  }
+}
+
+
