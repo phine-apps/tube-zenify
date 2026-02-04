@@ -1,18 +1,42 @@
 version: 2
 updates:
-  - package-ecosystem: 'npm'
-    directory: '/'
+  - package-ecosystem: "npm"
+    directory: "/"
     schedule:
-      interval: 'weekly'
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Tokyo"
+    groups:
+      dependencies:
+        patterns:
+          - "*"
     open-pull-requests-limit: 10
     labels:
-      - 'dependencies'
-      - 'automated'
+      - "dependencies"
+      - "automated"
     commit-message:
-      prefix: 'chore'
-      include: 'scope'
-
+      prefix: "chore"
+      include: "scope"
     ignore:
-      # Ignore major version updates for now (can be reviewed manually)
-      - dependency-name: '*'
-        update-types: ['version-update:semver-major']
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Tokyo"
+    groups:
+      actions:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "automated"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
