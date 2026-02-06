@@ -1,8 +1,12 @@
 {
-  "name": "tube_zenify",
+  "name": "tube-zenify",
   "private": true,
   "version": "1.0.0",
   "author": "phine-apps",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/phine-apps/tube-zenify.git"
+  },
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "scripts": {
@@ -13,7 +17,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "preview": "vite preview",
-    "zip": "npm run build && bestzip tube_zenify.zip dist/*"
+    "zip": "npm run build && bestzip tube-zenify.zip dist/*"
   },
   "dependencies": {
     "clsx": "^2.1.1",

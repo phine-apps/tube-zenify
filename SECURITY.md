@@ -13,7 +13,7 @@ Currently, only the latest version of TubeZenify is supported with security upda
 
 If you discover a potential security vulnerability in TubeZenify, please do NOT create a public issue. Instead, please follow these steps:
 
-1. Go to the [Security](https://github.com/phine-apps/tube_zenify/security) tab of this repository.
+1. Go to the [Security](https://github.com/phine-apps/tube-zenify/security) tab of this repository.
 2. Click on **Advisories**.
 3. Click **Report a vulnerability** to privately disclose the issue.
 
