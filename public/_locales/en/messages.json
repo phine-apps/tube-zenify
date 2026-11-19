@@ -231,6 +231,118 @@
   "labelInfo": {
     "message": "Info",
     "description": "Label for info section in settings"
+  },
+  "tabChannels": {
+    "message": "Channels",
+    "description": "Tab label for subscribed channels"
+  },
+  "tabPlaylists": {
+    "message": "Playlists",
+    "description": "Tab label for playlists and library"
+  },
+  "quickAccessTitle": {
+    "message": "Quick Access",
+    "description": "Section title for quick access links"
+  },
+  "quickWatchLater": {
+    "message": "Watch Later",
+    "description": "Quick link to Watch Later playlist"
+  },
+  "quickLikedVideos": {
+    "message": "Liked Videos",
+    "description": "Quick link to Liked Videos playlist"
+  },
+  "quickHistory": {
+    "message": "History",
+    "description": "Quick link to Watch History"
+  },
+  "quickAllPlaylists": {
+    "message": "All Playlists",
+    "description": "Quick link to all playlists page"
+  },
+  "searchPlaylistsPlaceholder": {
+    "message": "Filter playlists...",
+    "description": "Placeholder text for playlist search input"
+  },
+  "noPlaylistSearchResults": {
+    "message": "No matching playlists found.",
+    "description": "Message shown when playlist search returns no results"
+  },
+  "confirmDeletePlaylistFolder": {
+    "message": "Delete this folder? Playlists will be moved to Uncategorized.",
+    "description": "Confirmation prompt before deleting a playlist folder"
+  },
+  "noPlaylistsFound": {
+    "message": "No created or saved playlists found yet. (Use Quick Access above for Watch Later and Liked Videos.)",
+    "description": "Empty state message when no playlists are found"
+  },
+  "filterLive": {
+    "message": "LIVE",
+    "description": "Filter chip label for live channels"
+  },
+  "filterNew": {
+    "message": "New",
+    "description": "Filter chip label for channels with new content"
+  },
+  "sortLabel": {
+    "message": "Sort order",
+    "description": "Aria label for sort selector"
+  },
+  "sortManual": {
+    "message": "Manual",
+    "description": "Manual sort order option"
+  },
+  "sortName": {
+    "message": "Name (A-Z)",
+    "description": "Alphabetical sort order option"
+  },
+  "sortStatus": {
+    "message": "Live & New first",
+    "description": "Status priority sort order option"
+  },
+  "batchOrganize": {
+    "message": "Select multiple to move",
+    "description": "Tooltip for batch selection toggle"
+  },
+  "batchSelectAll": {
+    "message": "Select all",
+    "description": "Button to select all uncategorized items"
+  },
+  "batchDeselectAll": {
+    "message": "Deselect all",
+    "description": "Button to deselect all items"
+  },
+  "batchSelected": {
+    "message": "selected",
+    "description": "Suffix for selected item count"
+  },
+  "batchMove": {
+    "message": "Move",
+    "description": "Button to move selected items to target folder"
+  },
+  "customizeFolder": {
+    "message": "Color & Icon",
+    "description": "Label for folder color and emoji customization"
+  },
+  "actionReset": {
+    "message": "Reset",
+    "description": "Button to reset custom folder icon"
+  },
+  "labelPreferences": {
+    "message": "Preferences",
+    "description": "Settings menu section header for preferences"
+  },
+  "prefChannelOpenTarget": {
+    "message": "Channel link",
+    "description": "Label for channel click destination setting"
+  },
+  "prefChannelTargetHome": {
+    "message": "Home",
+    "description": "Channel home tab option"
+  },
+  "prefChannelTargetVideos": {
+    "message": "Videos",
+    "description": "Channel videos tab option"
   }
 }
 

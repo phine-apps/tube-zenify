@@ -1,45 +1,55 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { useDrop, useDrag } from 'react-dnd'
-import { ItemTypes } from '../constants'
+import { ItemTypes, FOLDER_COLORS, FOLDER_EMOJI_PRESETS } from '../constants'
 import {
   ChevronRight,
-  ChevronDown,
   Folder as FolderIcon,
   FolderOpen,
   Trash2,
   Edit2,
+  Palette,
   X,
-  Check,
 } from 'lucide-react'
 import clsx from 'clsx'
 import ChannelItem from './ChannelItem'
 
 import { useZen } from '../context/useZen'
 
+const isLeafNode = (node) =>
+  typeof node === 'string' ||
+  node?.type === 'channel' ||
+  node?.type === 'playlist'
+
 const Folder = ({ folder }) => {
   const {
     moveItem,
     renameFolder,
+    updateFolderAppearance,
     deleteFolder,
-    channels,
+    items,
+    activeTab,
     selectedFolderId,
     selectFolder,
     toggleFolder,
   } = useZen()
   const isOpen = folder.expanded || false
   const [isEditing, setIsEditing] = useState(false)
+  const [showAppearancePicker, setShowAppearancePicker] = useState(false)
   const [editName, setEditName] = useState(folder.name)
   const inputRef = useRef(null)
 
+  const colorConfig = FOLDER_COLORS[folder.color] || FOLDER_COLORS.amber
+
   const hasLiveChannel = useMemo(() => {
+    if (activeTab !== 'channels') return false
     const checkLive = (nodes) => {
       if (!nodes || !Array.isArray(nodes)) return false
       return nodes.some((node) => {
         if (typeof node === 'string') {
-          return channels[node]?.isLive
+          return items[node]?.isLive
         }
         if (node.type === 'channel') {
-          return channels[node.id]?.isLive
+          return items[node.id]?.isLive
         }
         if (node.type === 'folder') {
           return checkLive(node.children)
@@ -48,18 +58,19 @@ const Folder = ({ folder }) => {
       })
     }
     return checkLive(folder.children)
-  }, [folder.children, channels])
+  }, [folder.children, items, activeTab])
 
   const hasNewContent = useMemo(() => {
+    if (activeTab !== 'channels') return false
     const checkNew = (nodes) => {
       if (!nodes || !Array.isArray(nodes)) return false
       return nodes.some((node) => {
         if (typeof node === 'string') {
-          const ch = channels[node]
+          const ch = items[node]
           return ch?.hasNewContent && !ch?.isLive
         }
         if (node.type === 'channel') {
-          const ch = channels[node.id]
+          const ch = items[node.id]
           return ch?.hasNewContent && !ch?.isLive
         }
         if (node.type === 'folder') {
@@ -69,38 +80,31 @@ const Folder = ({ folder }) => {
       })
     }
     return checkNew(folder.children)
-  }, [folder.children, channels])
+  }, [folder.children, items, activeTab])
 
-  const channelCount = useMemo(() => {
-    const countChannels = (nodes) => {
-      if (!nodes || !Array.isArray(nodes)) return 0
-      const foundChannelIds = new Set()
+  const itemCount = useMemo(() => {
+    const foundIds = new Set()
 
-      const collectChannelIds = (nodes) => {
-        if (!nodes || !Array.isArray(nodes)) return
-        nodes.forEach((node) => {
-          if (typeof node === 'string') {
-            // String ID means it's a channel - only count if it exists in channels
-            if (channels[node]) {
-              foundChannelIds.add(node)
-            }
-          } else if (node.type === 'channel') {
-            // Only count if it exists in channels
-            if (channels[node.id]) {
-              foundChannelIds.add(node.id)
-            }
-          } else if (node.type === 'folder') {
-            // Recursively collect channels in subfolders
-            collectChannelIds(node.children)
+    const collectIds = (nodes) => {
+      if (!nodes || !Array.isArray(nodes)) return
+      nodes.forEach((node) => {
+        if (typeof node === 'string') {
+          if (items[node]) {
+            foundIds.add(node)
           }
-        })
-      }
-
-      collectChannelIds(nodes)
-      return foundChannelIds.size
+        } else if (isLeafNode(node)) {
+          if (items[node.id]) {
+            foundIds.add(node.id)
+          }
+        } else if (node.type === 'folder') {
+          collectIds(node.children)
+        }
+      })
     }
-    return countChannels(folder.children)
-  }, [folder.children, channels])
+
+    collectIds(folder.children)
+    return foundIds.size
+  }, [folder.children, items])
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -123,56 +127,59 @@ const Folder = ({ folder }) => {
   const dropRef = useRef(null)
   const [dropPosition, setDropPosition] = useState(null) // 'before' | 'after' | 'inside' | null
 
-  const [{ isOver }, drop] = useDrop(() => ({
-    accept: [ItemTypes.CHANNEL, ItemTypes.FOLDER],
-    hover: (item, monitor) => {
-      if (!dropRef.current) return
-      if (item.id === folder.id) {
+  const [{ isOver }, drop] = useDrop(
+    () => ({
+      accept: [ItemTypes.CHANNEL, ItemTypes.PLAYLIST, ItemTypes.FOLDER],
+      hover: (item, monitor) => {
+        if (!dropRef.current) return
+        if (item.id === folder.id) {
+          setDropPosition(null)
+          return
+        }
+
+        const clientOffset = monitor.getClientOffset()
+        if (!clientOffset) return
+        const hoverBoundingRect = dropRef.current.getBoundingClientRect()
+        const hoverClientY = clientOffset.y - hoverBoundingRect.top
+        const height = hoverBoundingRect.bottom - hoverBoundingRect.top
+
+        // Three zones: Top 25% (before), Middle 50% (inside), Bottom 25% (after)
+        if (hoverClientY < height * 0.25) {
+          setDropPosition('before')
+        } else if (hoverClientY > height * 0.75) {
+          setDropPosition('after')
+        } else {
+          setDropPosition('inside')
+        }
+      },
+      drop: (item, monitor) => {
+        if (monitor.didDrop()) return
+        if (item.id === folder.id) return
+        if (!dropRef.current) return
+        const clientOffset = monitor.getClientOffset()
+        if (!clientOffset) return
+        const hoverBoundingRect = dropRef.current.getBoundingClientRect()
+        const hoverClientY = clientOffset.y - hoverBoundingRect.top
+        const height = hoverBoundingRect.bottom - hoverBoundingRect.top
+
+        let pos = 'inside'
+        if (hoverClientY < height * 0.25) pos = 'before'
+        else if (hoverClientY > height * 0.75) pos = 'after'
+
+        moveItem(item.id, folder.id, pos)
         setDropPosition(null)
-        return
-      }
-
-      const hoverBoundingRect = dropRef.current.getBoundingClientRect()
-      const clientOffset = monitor.getClientOffset()
-      const hoverClientY = clientOffset.y - hoverBoundingRect.top
-      const height = hoverBoundingRect.bottom - hoverBoundingRect.top
-
-      // Three zones: Top 25% (before), Middle 50% (inside), Bottom 25% (after)
-      if (hoverClientY < height * 0.25) {
-        setDropPosition('before')
-      } else if (hoverClientY > height * 0.75) {
-        setDropPosition('after')
-      } else {
-        setDropPosition('inside')
-      }
-    },
-    drop: (item, monitor) => {
-      if (monitor.didDrop()) return
-      if (item.id === folder.id) return
-      const hoverBoundingRect = dropRef.current.getBoundingClientRect()
-      const clientOffset = monitor.getClientOffset()
-      const hoverClientY = clientOffset.y - hoverBoundingRect.top
-      const height = hoverBoundingRect.bottom - hoverBoundingRect.top
-
-      let pos = 'inside'
-      if (hoverClientY < height * 0.25) pos = 'before'
-      else if (hoverClientY > height * 0.75) pos = 'after'
-
-      moveItem(item.id, folder.id, pos)
-      setDropPosition(null)
-    },
-    collect: (monitor) => ({
-      isOver: monitor.isOver({ shallow: true }),
+      },
+      collect: (monitor) => ({
+        isOver: monitor.isOver({ shallow: true }),
+      }),
     }),
-  }))
+    [folder.id, moveItem]
+  )
 
   const combinedRef = (node) => {
     drag(drop(node))
     dropRef.current = node
   }
-
-  // No longer need this effect to sync isOver and dropPosition
-  // We'll use isOver in the render logic to decide whether to show the indicators
 
   const toggleOpen = (e) => {
     e.stopPropagation()
@@ -244,11 +251,13 @@ const Folder = ({ folder }) => {
         </div>
         <div
           className={clsx(
-            'transition-colors',
-            isOver ? 'text-zen-accent' : 'text-yellow-500'
+            'transition-colors flex items-center justify-center w-5 h-5 shrink-0',
+            isOver ? 'text-zen-accent' : colorConfig.iconClass
           )}
         >
-          {isOpen ? (
+          {folder.icon ? (
+            <span className="text-base leading-none">{folder.icon}</span>
+          ) : isOpen ? (
             <FolderOpen size={20} fill="currentColor" />
           ) : (
             <FolderIcon size={20} fill="currentColor" />
@@ -289,14 +298,28 @@ const Folder = ({ folder }) => {
                   }
                 ></span>
               )}
-              {channelCount}
+              {itemCount}
             </span>
             <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                className="p-1 hover:bg-zen-accent/10 text-gray-300 hover:text-zen-accent rounded transition-all"
+                title={
+                  chrome.i18n.getMessage('customizeFolder') ||
+                  'Customize Color / Icon'
+                }
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowAppearancePicker((prev) => !prev)
+                }}
+              >
+                <Palette size={12} />
+              </button>
               <button
                 className="p-1 hover:bg-zen-accent/10 text-gray-300 hover:text-zen-accent rounded transition-all"
                 title={chrome.i18n.getMessage('renameFolder') || 'Rename'}
                 onClick={(e) => {
                   e.stopPropagation()
+                  setEditName(folder.name)
                   setIsEditing(true)
                 }}
               >
@@ -307,12 +330,13 @@ const Folder = ({ folder }) => {
                 title={chrome.i18n.getMessage('deleteFolder') || 'Delete'}
                 onClick={(e) => {
                   e.stopPropagation()
-                  if (
-                    confirm(
-                      chrome.i18n.getMessage('confirmDeleteFolder') ||
+                  const confirmMsg =
+                    activeTab === 'playlists'
+                      ? chrome.i18n.getMessage('confirmDeletePlaylistFolder') ||
+                        'Delete this folder? Playlists will be moved to Uncategorized.'
+                      : chrome.i18n.getMessage('confirmDeleteFolder') ||
                         'Delete this folder? Channels will be moved to Uncategorized.'
-                    )
-                  ) {
+                  if (confirm(confirmMsg)) {
                     deleteFolder(folder.id)
                   }
                 }}
@@ -324,6 +348,76 @@ const Folder = ({ folder }) => {
         )}
       </div>
 
+      {/* Inline Folder Appearance Picker */}
+      {showAppearancePicker && (
+        <div
+          className="mt-1 mb-2 p-2.5 bg-zen-surface border border-zen-border rounded-xl shadow-md space-y-2 z-30"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zen-muted">
+              {chrome.i18n.getMessage('customizeFolder') || 'Color & Icon'}
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowAppearancePicker(false)}
+              className="p-0.5 text-zen-muted hover:text-zen-text rounded"
+            >
+              <X size={12} />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {Object.entries(FOLDER_COLORS).map(([key, cfg]) => {
+              const isActive = (folder.color || 'amber') === key && !folder.icon
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() =>
+                    updateFolderAppearance(folder.id, { color: key, icon: '' })
+                  }
+                  className={clsx(
+                    'w-5 h-5 rounded-full transition-transform hover:scale-110',
+                    cfg.dotClass,
+                    isActive && 'ring-2 ring-offset-2 ring-zen-accent'
+                  )}
+                  title={cfg.label}
+                />
+              )
+            })}
+          </div>
+
+          <div className="flex items-center gap-1 flex-wrap pt-1 border-t border-zen-border/60">
+            {FOLDER_EMOJI_PRESETS.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() =>
+                  updateFolderAppearance(folder.id, { icon: emoji })
+                }
+                className={clsx(
+                  'w-6 h-6 rounded-md text-sm flex items-center justify-center hover:bg-zen-bg transition-colors',
+                  folder.icon === emoji &&
+                    'bg-zen-accent/15 ring-1 ring-zen-accent'
+                )}
+              >
+                {emoji}
+              </button>
+            ))}
+            {folder.icon && (
+              <button
+                type="button"
+                onClick={() => updateFolderAppearance(folder.id, { icon: '' })}
+                className="ml-auto px-2 py-0.5 text-[10px] font-medium text-zen-muted hover:text-zen-text bg-zen-bg rounded"
+              >
+                {chrome.i18n.getMessage('actionReset') || 'Reset'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {isOver && dropPosition === 'after' && (
         <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-zen-accent animate-pulse z-20 rounded-full" />
       )}
@@ -331,8 +425,7 @@ const Folder = ({ folder }) => {
       {/* Children */}
       {isOpen && folder.children && (
         <div className="ml-3 pl-3 border-l-2 border-zen-border space-y-1 mt-1">
-          {folder.children.map((child, _index) => {
-            // Handle both full objects and simple ID strings
+          {folder.children.map((child) => {
             const childId = typeof child === 'string' ? child : child.id
             const type = typeof child === 'string' ? 'channel' : child.type
             const childFolder =

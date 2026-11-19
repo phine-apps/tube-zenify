@@ -174,6 +174,90 @@
   },
   "labelInfo": {
     "message": "情報"
+  },
+  "tabChannels": {
+    "message": "チャンネル"
+  },
+  "tabPlaylists": {
+    "message": "再生リスト"
+  },
+  "quickAccessTitle": {
+    "message": "クイックアクセス"
+  },
+  "quickWatchLater": {
+    "message": "後で見る"
+  },
+  "quickLikedVideos": {
+    "message": "高く評価した動画"
+  },
+  "quickHistory": {
+    "message": "履歴"
+  },
+  "quickAllPlaylists": {
+    "message": "すべて表示"
+  },
+  "searchPlaylistsPlaceholder": {
+    "message": "再生リストを検索..."
+  },
+  "noPlaylistSearchResults": {
+    "message": "該当する再生リストが見つかりませんでした。"
+  },
+  "confirmDeletePlaylistFolder": {
+    "message": "このフォルダを削除しますか？ 中身は「未分類」に移動されます。"
+  },
+  "noPlaylistsFound": {
+    "message": "作成・保存済みの再生リストが見つかりませんでした。（「後で見る」や「高く評価した動画」は上部のクイックアクセスから開けます）"
+  },
+  "filterLive": {
+    "message": "LIVE"
+  },
+  "filterNew": {
+    "message": "新着"
+  },
+  "sortLabel": {
+    "message": "並び順"
+  },
+  "sortManual": {
+    "message": "手動"
+  },
+  "sortName": {
+    "message": "名前順 (A-Z)"
+  },
+  "sortStatus": {
+    "message": "LIVE・新着優先"
+  },
+  "batchOrganize": {
+    "message": "複数選択して移動"
+  },
+  "batchSelectAll": {
+    "message": "すべて選択"
+  },
+  "batchDeselectAll": {
+    "message": "選択解除"
+  },
+  "batchSelected": {
+    "message": "件選択"
+  },
+  "batchMove": {
+    "message": "移動"
+  },
+  "customizeFolder": {
+    "message": "色とアイコン"
+  },
+  "actionReset": {
+    "message": "リセット"
+  },
+  "labelPreferences": {
+    "message": "表示・動作設定"
+  },
+  "prefChannelOpenTarget": {
+    "message": "チャンネル遷移先"
+  },
+  "prefChannelTargetHome": {
+    "message": "ホーム"
+  },
+  "prefChannelTargetVideos": {
+    "message": "動画一覧"
   }
 }
 

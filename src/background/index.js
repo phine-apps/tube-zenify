@@ -1,27 +1,55 @@
-import { findChannelsAndContinuation, fetchSidebarGuide } from './library.js'
+import {
+  findChannelsAndContinuation,
+  fetchSidebarGuide,
+  fetchPlaylistsPipeline,
+  buildYouTubeAuthHeaders,
+  buildSanitizedContext,
+  parseYtInitialData,
+} from './library.js'
+
+function safeSendRuntimeMessage(payload) {
+  try {
+    const maybePromise = chrome.runtime.sendMessage(payload)
+    if (maybePromise && typeof maybePromise.catch === 'function') {
+      maybePromise.catch(() => {
+        // Side panel may be closed when async background fetch completes
+      })
+    }
+  } catch (_e) {
+    // Ignore runtime unavailable errors
+  }
+}
 
 // Fetches ALL subscribed channels by following continuation tokens
 // Called from background to bypass CSP
-async function fetchChannelsFromFeed(apiKey, context, clientVersion) {
+async function fetchChannelsFromFeed(
+  apiKey,
+  context,
+  clientVersion,
+  sapisid,
+  accountMeta = {}
+) {
   const allChannels = {}
   let continuationToken = null
 
   try {
-    // Step 1: Initial Page Load
-    const response = await fetch('https://www.youtube.com/feed/channels')
-    const text = await response.text()
-    let data = null
-    const jsonMatch =
-      text.match(/var ytInitialData\s*=\s*({.*?});/) ||
-      text.match(/window\["ytInitialData"\]\s*=\s*({.*?});/)
+    const authHeaders = await buildYouTubeAuthHeaders(sapisid, accountMeta)
+    const sanitizedContext = context ? buildSanitizedContext(context) : context
 
-    if (jsonMatch) {
-      try {
-        data = JSON.parse(jsonMatch[1])
-      } catch (e) {
-        console.error('Failed to parse ytInitialData', e)
-      }
-    }
+    // Step 1: Initial Page Load (respect multi-account sessionIndex)
+    const sessionIndex = accountMeta?.sessionIndex
+    const feedUrl =
+      sessionIndex !== undefined &&
+      sessionIndex !== null &&
+      String(sessionIndex) !== '' &&
+      String(sessionIndex) !== '0'
+        ? `https://www.youtube.com/feed/channels?authuser=${encodeURIComponent(String(sessionIndex))}`
+        : 'https://www.youtube.com/feed/channels'
+    const response = await fetch(feedUrl, {
+      credentials: 'include',
+    })
+    const text = await response.text()
+    const data = parseYtInitialData(text)
 
     if (data) {
       const result = findChannelsAndContinuation(data)
@@ -39,11 +67,17 @@ async function fetchChannelsFromFeed(apiKey, context, clientVersion) {
         `https://www.youtube.com/youtubei/v1/browse?key=${apiKey}`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Youtube-Client-Name': '1',
+            'X-Youtube-Client-Version': clientVersion || '2.20240315.01.00',
+            ...authHeaders,
+          },
           body: JSON.stringify({
-            context: context,
+            context: sanitizedContext,
             continuation: continuationToken,
           }),
+          credentials: 'include',
         }
       )
 
@@ -60,7 +94,9 @@ async function fetchChannelsFromFeed(apiKey, context, clientVersion) {
         const guideChannels = await fetchSidebarGuide(
           apiKey,
           context,
-          clientVersion
+          clientVersion,
+          sapisid,
+          accountMeta
         )
 
         Object.values(guideChannels).forEach((gChannel) => {
@@ -97,6 +133,26 @@ async function fetchChannelsFromFeed(apiKey, context, clientVersion) {
   }
 }
 
+// Fetches user's saved/created playlists from /feed/playlists and guide API
+async function fetchPlaylistsFromFeed(
+  apiKey,
+  context,
+  clientVersion,
+  sapisid,
+  accountMeta = {}
+) {
+  return fetchPlaylistsPipeline({
+    apiKey,
+    context,
+    clientVersion,
+    sapisid,
+    sessionIndex: accountMeta?.sessionIndex,
+    delegatedSessionId: accountMeta?.delegatedSessionId,
+    visitorData: accountMeta?.visitorData,
+    sourceLabel: 'background',
+  })
+}
+
 // Allow opening side panel by clicking the extension icon
 chrome.sidePanel
   .setPanelBehavior({ openPanelOnActionClick: true })
@@ -108,7 +164,13 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     fetchChannelsFromFeed(
       request.apiKey,
       request.context,
-      request.clientVersion
+      request.clientVersion,
+      request.sapisid,
+      {
+        sessionIndex: request.sessionIndex,
+        delegatedSessionId: request.delegatedSessionId,
+        visitorData: request.visitorData,
+      }
     )
       .then((channels) => {
         sendResponse({ channels })
@@ -119,22 +181,54 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     return true
   }
 
+  if (request.action === 'FETCH_PLAYLISTS_BACKEND') {
+    fetchPlaylistsFromFeed(
+      request.apiKey,
+      request.context,
+      request.clientVersion,
+      request.sapisid,
+      {
+        sessionIndex: request.sessionIndex,
+        delegatedSessionId: request.delegatedSessionId,
+        visitorData: request.visitorData,
+      }
+    )
+      .then((playlists) => {
+        sendResponse({ playlists })
+      })
+      .catch((error) => {
+        sendResponse({ error: error.message || 'Failed to fetch playlists' })
+      })
+    return true
+  }
+
   if (
     request.action === 'START_SCRAPE' ||
     request.action === 'CLEAR_AND_SCRAPE'
   ) {
-    chrome.runtime.sendMessage({ action: 'SET_CONNECTING' })
+    safeSendRuntimeMessage({ action: 'SET_CONNECTING' })
 
     // 1. Proactive Background Fetch (using cached credentials)
     chrome.storage.local.get(['yt_credentials'], (result) => {
       const creds = result.yt_credentials
       if (creds && creds.apiKey && creds.context) {
+        const accountMeta = {
+          sessionIndex: creds.sessionIndex,
+          delegatedSessionId: creds.delegatedSessionId,
+          visitorData: creds.visitorData,
+        }
         // Use the CACHED context which is known to be "clean" (from Home/Browse)
-        fetchChannelsFromFeed(creds.apiKey, creds.context, creds.clientVersion)
+        fetchChannelsFromFeed(
+          creds.apiKey,
+          creds.context,
+          creds.clientVersion,
+          creds.sapisid,
+          accountMeta
+        )
           .then((channels) => {
             if (Object.keys(channels).length > 0) {
               // Get login status from cached info (rough estimate)
-              chrome.runtime.sendMessage({
+              safeSendRuntimeMessage({
                 action: 'CHANNELS_UPDATED',
                 channels: channels,
                 isLoggedIn: true, // We have creds, so likely logged in
@@ -144,27 +238,65 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
           })
           .catch((e) => {
             console.error('TubeZenify: Background fetch failed', e)
-            chrome.runtime.sendMessage({
+            safeSendRuntimeMessage({
               action: 'CONNECTION_ERROR',
               error: e.message || 'Background fetch failed',
               isLoginRequired: false,
             })
           })
+
+        fetchPlaylistsFromFeed(
+          creds.apiKey,
+          creds.context,
+          creds.clientVersion,
+          creds.sapisid,
+          accountMeta
+        )
+          .then((playlists) => {
+            if (Object.keys(playlists).length > 0) {
+              safeSendRuntimeMessage({
+                action: 'PLAYLISTS_UPDATED',
+                playlists,
+                source: 'internal_cache',
+              })
+            }
+          })
+          .catch((e) => {
+            console.warn('TubeZenify: Background playlist fetch failed', e)
+          })
       }
     })
 
-    // 2. Tab-based Scrape/Fetch (most accurate for DOM data)
+    // 2. Tab-based Scrape/Fetch (prefer active/non-watch tab; never force-reload user tabs)
     chrome.tabs.query({ url: '*://*.youtube.com/*' }, (tabs) => {
       if (tabs.length > 0) {
-        tabs.forEach((tab) => {
+        const orderedTabs = [...tabs].sort((a, b) => {
+          if (a.active !== b.active) return a.active ? -1 : 1
+          const aWatch = a.url?.includes('/watch') ? 1 : 0
+          const bWatch = b.url?.includes('/watch') ? 1 : 0
+          return aWatch - bWatch
+        })
+
+        const tryTab = (index) => {
+          if (index >= orderedTabs.length) {
+            // All open YouTube tabs failed to respond (e.g. content script orphaned after extension reload).
+            // Reload only a single non-watch tab (or the first tab) so the content script can re-inject.
+            const reloadCandidate =
+              orderedTabs.find((t) => !t.url?.includes('/watch')) ||
+              orderedTabs[0]
+            if (reloadCandidate?.id) {
+              chrome.tabs.reload(reloadCandidate.id)
+            }
+            return
+          }
+          const tab = orderedTabs[index]
           chrome.tabs.sendMessage(
             tab.id,
             { action: 'GET_CHANNELS' },
             (response) => {
               if (chrome.runtime.lastError) {
                 console.warn('TubeZenify: Target tab not responding', tab.id)
-                // If content script is dead (e.g. extension reloaded), reload the tab
-                chrome.tabs.reload(tab.id)
+                tryTab(index + 1)
                 return
               }
               if (
@@ -172,16 +304,31 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
                 response.channels &&
                 Object.keys(response.channels).length > 0
               ) {
-                chrome.runtime.sendMessage({
+                safeSendRuntimeMessage({
                   action: 'CHANNELS_UPDATED',
                   channels: response.channels,
                   isLoggedIn: response.isLoggedIn,
                   gaiaId: response.gaiaId,
+                  source: 'tab',
+                })
+              }
+              if (
+                response &&
+                response.playlists &&
+                Object.keys(response.playlists).length > 0
+              ) {
+                safeSendRuntimeMessage({
+                  action: 'PLAYLISTS_UPDATED',
+                  playlists: response.playlists,
+                  gaiaId: response.gaiaId,
+                  source: 'tab',
                 })
               }
             }
           )
-        })
+        }
+
+        tryTab(0)
       } else {
         // No YouTube tab found. Open it so we can fetch channels.
         chrome.tabs.create({

@@ -220,6 +220,90 @@
   },
   "labelInfo": {
     "message": "信息"
+  },
+  "tabChannels": {
+    "message": "频道"
+  },
+  "tabPlaylists": {
+    "message": "播放列表"
+  },
+  "quickAccessTitle": {
+    "message": "快速访问"
+  },
+  "quickWatchLater": {
+    "message": "稍后观看"
+  },
+  "quickLikedVideos": {
+    "message": "赞过的视频"
+  },
+  "quickHistory": {
+    "message": "历史记录"
+  },
+  "quickAllPlaylists": {
+    "message": "全部播放列表"
+  },
+  "searchPlaylistsPlaceholder": {
+    "message": "搜索播放列表..."
+  },
+  "noPlaylistSearchResults": {
+    "message": "未找到匹配的播放列表。"
+  },
+  "confirmDeletePlaylistFolder": {
+    "message": "确定要删除此文件夹吗？其中的播放列表将移至“未分类”。"
+  },
+  "noPlaylistsFound": {
+    "message": "尚未找到创建或保存的播放列表。（可通过上方的快速访问打开“稍后再看”和“赞过的视频”。）"
+  },
+  "filterLive": {
+    "message": "直播中"
+  },
+  "filterNew": {
+    "message": "新内容"
+  },
+  "sortLabel": {
+    "message": "排序方式"
+  },
+  "sortManual": {
+    "message": "手动"
+  },
+  "sortName": {
+    "message": "名称 (A-Z)"
+  },
+  "sortStatus": {
+    "message": "直播与新内容优先"
+  },
+  "batchOrganize": {
+    "message": "多选移动"
+  },
+  "batchSelectAll": {
+    "message": "全选"
+  },
+  "batchDeselectAll": {
+    "message": "取消全选"
+  },
+  "batchSelected": {
+    "message": "已选"
+  },
+  "batchMove": {
+    "message": "移动"
+  },
+  "customizeFolder": {
+    "message": "颜色与图标"
+  },
+  "actionReset": {
+    "message": "重置"
+  },
+  "labelPreferences": {
+    "message": "偏好设置"
+  },
+  "prefChannelOpenTarget": {
+    "message": "频道打开方式"
+  },
+  "prefChannelTargetHome": {
+    "message": "主页"
+  },
+  "prefChannelTargetVideos": {
+    "message": "视频列表"
   }
 }
 
