@@ -1,57 +1,514 @@
 import { useCallback, useEffect } from 'react'
-import { Storage } from '../../utils/storage'
 import { SYNC_LIMIT } from '../../utils/constants'
+import { Storage } from '../../utils/storage'
+
+/**
+ * Validates a folder tree structure ({ root, uncategorized }).
+ * Throws an Error if invalid.
+ * @param {object} parsed
+ */
+export function validateFolderStructure(parsed) {
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error('Invalid structure: must be an object')
+  }
+
+  if (!parsed.root || !Array.isArray(parsed.root)) {
+    throw new Error('Invalid structure: missing root array')
+  }
+
+  if (
+    parsed.uncategorized !== undefined &&
+    !Array.isArray(parsed.uncategorized)
+  ) {
+    throw new Error('Invalid structure: uncategorized must be an array')
+  }
+
+  const MAX_DEPTH = 50
+  const validateNode = (node, depth = 0) => {
+    if (depth > MAX_DEPTH) {
+      throw new Error(`Structure too deep (max ${MAX_DEPTH} levels)`)
+    }
+
+    if (typeof node === 'string') {
+      if (node.length > 200) {
+        throw new Error('Invalid item ID: too long')
+      }
+      return
+    }
+
+    if (!node || typeof node !== 'object') {
+      throw new Error('Invalid node: must be string or object')
+    }
+
+    if (node.type === 'channel' || node.type === 'playlist') {
+      if (!node.id || typeof node.id !== 'string') {
+        throw new Error(`Invalid ${node.type}: missing or invalid id`)
+      }
+      if (node.id.length > 200) {
+        throw new Error(`Invalid ${node.type} ID: too long`)
+      }
+    } else if (node.type === 'folder') {
+      if (!node.id || typeof node.id !== 'string') {
+        throw new Error('Invalid folder: missing or invalid id')
+      }
+      if (!node.name || typeof node.name !== 'string') {
+        throw new Error('Invalid folder: missing or invalid name')
+      }
+      if (node.name.length > 200) {
+        throw new Error('Invalid folder name: too long')
+      }
+      if (
+        node.color !== undefined &&
+        (typeof node.color !== 'string' || node.color.length > 30)
+      ) {
+        throw new Error('Invalid folder color')
+      }
+      if (
+        node.icon !== undefined &&
+        (typeof node.icon !== 'string' || node.icon.length > 20)
+      ) {
+        throw new Error('Invalid folder icon')
+      }
+      if (node.children) {
+        if (!Array.isArray(node.children)) {
+          throw new Error('Invalid folder: children must be an array')
+        }
+        if (node.children.length > 10000) {
+          throw new Error('Invalid folder: too many children (max 10000)')
+        }
+        node.children.forEach((child) => validateNode(child, depth + 1))
+      }
+    } else {
+      throw new Error(`Invalid node type: ${node.type}`)
+    }
+  }
+
+  parsed.root.forEach((node) => validateNode(node))
+  if (parsed.uncategorized) {
+    parsed.uncategorized.forEach((node) => validateNode(node))
+  }
+
+  const size = Storage.calculateSize(parsed)
+  if (size > SYNC_LIMIT) {
+    throw new Error(
+      `Import data size (${(size / 1024).toFixed(1)}KB) exceeds sync storage limit (${SYNC_LIMIT / 1024}KB). Please reduce the number of folders or items.`
+    )
+  }
+}
+
+/**
+ * Pure helper to move multiple leaf items to a target folder (or 'root' for uncategorized).
+ */
+export function batchMoveItemsInTree(
+  prev,
+  itemIds,
+  targetFolderId,
+  itemType = 'channel'
+) {
+  if (!Array.isArray(itemIds) || itemIds.length === 0 || !targetFolderId) {
+    return prev
+  }
+
+  const idSet = new Set(itemIds)
+  const foundIds = []
+  const seen = new Set()
+
+  const collectAndStrip = (nodes) => {
+    const result = []
+    for (const node of nodes || []) {
+      const nodeId = typeof node === 'string' ? node : node?.id
+      const isFolder =
+        node && typeof node === 'object' && node.type === 'folder'
+
+      if (!isFolder && idSet.has(nodeId)) {
+        if (!seen.has(nodeId)) {
+          seen.add(nodeId)
+          foundIds.push(nodeId)
+        }
+        continue
+      }
+
+      if (isFolder) {
+        result.push({
+          ...node,
+          children: collectAndStrip(node.children || []),
+        })
+      } else {
+        result.push(node)
+      }
+    }
+    return result
+  }
+
+  const newUncategorized = (prev.uncategorized || []).filter((item) => {
+    const itemId = typeof item === 'string' ? item : item?.id
+    if (idSet.has(itemId)) {
+      if (!seen.has(itemId)) {
+        seen.add(itemId)
+        foundIds.push(itemId)
+      }
+      return false
+    }
+    return true
+  })
+
+  const newRoot = collectAndStrip(prev.root || [])
+
+  if (foundIds.length === 0) return prev
+
+  if (targetFolderId === 'root') {
+    const existing = new Set(
+      newUncategorized.map((c) => (typeof c === 'string' ? c : c.id))
+    )
+    const additions = foundIds
+      .filter((id) => !existing.has(id))
+      .map((id) => ({ id, type: itemType }))
+    return {
+      root: newRoot,
+      uncategorized: [...newUncategorized, ...additions],
+    }
+  }
+
+  let inserted = false
+  const insertIntoFolder = (nodes) =>
+    nodes.map((node) => {
+      if (typeof node === 'string' || node.type !== 'folder') return node
+      if (node.id === targetFolderId) {
+        inserted = true
+        const existingChildren = new Set(
+          (node.children || []).map((c) => (typeof c === 'string' ? c : c.id))
+        )
+        const additions = foundIds.filter((id) => !existingChildren.has(id))
+        return {
+          ...node,
+          expanded: true,
+          children: [...(node.children || []), ...additions],
+        }
+      }
+      return {
+        ...node,
+        children: insertIntoFolder(node.children || []),
+      }
+    })
+
+  const updatedRoot = insertIntoFolder(newRoot)
+  if (!inserted) return prev
+
+  return {
+    root: updatedRoot,
+    uncategorized: newUncategorized,
+  }
+}
+
+/**
+ * Pure helper to update folder color and/or emoji icon.
+ */
+export function updateFolderAppearanceInTree(prev, folderId, appearance) {
+  const updateNodes = (nodes) =>
+    (nodes || []).map((node) => {
+      if (typeof node === 'string' || node.type !== 'folder') return node
+      if (node.id === folderId) {
+        const next = { ...node }
+        if ('color' in appearance) {
+          if (appearance.color) next.color = appearance.color
+          else delete next.color
+        }
+        if ('icon' in appearance) {
+          if (appearance.icon) next.icon = appearance.icon
+          else delete next.icon
+        }
+        return next
+      }
+      return {
+        ...node,
+        children: updateNodes(node.children),
+      }
+    })
+
+  return {
+    ...prev,
+    root: updateNodes(prev.root),
+  }
+}
+
+/**
+ * Pure helper to move a single item (channel, playlist, or folder) to a new position in the tree.
+ * Rolls back to `prev` if the move is invalid (self-drop, ancestor-into-descendant, or missing target).
+ */
+export function moveItemInTree(
+  prev,
+  dragId,
+  targetId,
+  position = 'inside',
+  itemType = 'channel'
+) {
+  if (!dragId || !targetId || dragId === targetId) {
+    return prev
+  }
+
+  let movedItem = null
+
+  const removeFromTree = (nodes) => {
+    const result = []
+    for (const node of nodes || []) {
+      const nodeId = typeof node === 'string' ? node : node.id
+      if (nodeId === dragId) {
+        movedItem = node
+        continue
+      }
+      if (typeof node !== 'string' && node.type === 'folder') {
+        result.push({
+          ...node,
+          children: removeFromTree(node.children || []),
+        })
+      } else {
+        result.push(node)
+      }
+    }
+    return result
+  }
+
+  let newUncategorized = (prev.uncategorized || []).filter((item) => {
+    const itemId = typeof item === 'string' ? item : item.id
+    if (itemId === dragId) {
+      movedItem = item
+      return false
+    }
+    return true
+  })
+
+  let newRoot = removeFromTree(prev.root || [])
+
+  if (!movedItem) return prev
+
+  const isItemLeaf = (node) =>
+    typeof node === 'string' ||
+    node.type === 'channel' ||
+    node.type === 'playlist'
+
+  const itemToInsert =
+    typeof movedItem === 'string'
+      ? movedItem
+      : isItemLeaf(movedItem)
+        ? movedItem.id
+        : movedItem
+
+  if (typeof itemToInsert !== 'string' && itemToInsert.type === 'folder') {
+    const isDescendant = (parent, searchId) => {
+      if (!parent.children) return false
+      return parent.children.some((child) => {
+        const cId = typeof child === 'string' ? child : child.id
+        if (cId === searchId) return true
+        if (typeof child !== 'string' && child.type === 'folder') {
+          return isDescendant(child, searchId)
+        }
+        return false
+      })
+    }
+    if (isDescendant(itemToInsert, targetId)) return prev
+  }
+
+  if (targetId === 'root' && position === 'inside') {
+    const id = typeof itemToInsert === 'string' ? itemToInsert : itemToInsert.id
+    const isLeaf = isItemLeaf(itemToInsert)
+
+    if (isLeaf) {
+      if (
+        !newUncategorized.some((c) => (typeof c === 'string' ? c : c.id) === id)
+      ) {
+        newUncategorized.push({ id, type: itemType })
+      }
+      return { root: newRoot, uncategorized: newUncategorized }
+    } else {
+      if (!newRoot.some((f) => f.id === itemToInsert.id)) {
+        newRoot.push(itemToInsert)
+      }
+      return { root: newRoot, uncategorized: newUncategorized }
+    }
+  }
+
+  const targetIdx = newUncategorized.findIndex(
+    (item) => (typeof item === 'string' ? item : item.id) === targetId
+  )
+
+  let inserted = false
+
+  if (targetIdx !== -1 && (position === 'before' || position === 'after')) {
+    const id = typeof itemToInsert === 'string' ? itemToInsert : itemToInsert.id
+    const isLeaf = isItemLeaf(itemToInsert)
+
+    if (isLeaf) {
+      const newItem = { id, type: itemType }
+      const result = [...newUncategorized]
+      result.splice(
+        position === 'before' ? targetIdx : targetIdx + 1,
+        0,
+        newItem
+      )
+      newUncategorized = result
+      inserted = true
+    } else {
+      if (!newRoot.some((f) => f.id === itemToInsert.id)) {
+        newRoot.push(itemToInsert)
+      }
+      inserted = true
+    }
+  } else if (targetId === 'root' && position === 'after') {
+    newRoot.push(itemToInsert)
+    inserted = true
+  } else {
+    const insertIntoTree = (nodes) => {
+      const result = []
+      for (let i = 0; i < nodes.length; i++) {
+        const node = nodes[i]
+        const nodeId = typeof node === 'string' ? node : node.id
+
+        if (
+          nodeId === targetId &&
+          (position === 'before' || position === 'after')
+        ) {
+          inserted = true
+          if (position === 'before') {
+            result.push(itemToInsert)
+            result.push(node)
+          } else {
+            result.push(node)
+            result.push(itemToInsert)
+          }
+          continue
+        }
+
+        if (
+          nodeId === targetId &&
+          position === 'inside' &&
+          typeof node !== 'string' &&
+          node.type === 'folder'
+        ) {
+          inserted = true
+          result.push({
+            ...node,
+            expanded: true,
+            children: [...(node.children || []), itemToInsert],
+          })
+          continue
+        }
+
+        if (typeof node !== 'string' && node.type === 'folder') {
+          result.push({
+            ...node,
+            children: insertIntoTree(node.children || []),
+          })
+        } else {
+          result.push(node)
+        }
+      }
+      return result
+    }
+    newRoot = insertIntoTree(newRoot)
+  }
+
+  if (!inserted) {
+    return prev
+  }
+
+  // Sanitization: Ensure root ONLY contains folder objects
+  const sanitizedRoot = []
+  newRoot.forEach((node) => {
+    if (typeof node === 'string') {
+      if (
+        !newUncategorized.some(
+          (c) => (typeof c === 'string' ? c : c.id) === node
+        )
+      ) {
+        newUncategorized.push({ id: node, type: itemType })
+      }
+    } else if (node && node.type === 'folder') {
+      sanitizedRoot.push(node)
+    } else if (node && (node.type === 'channel' || node.type === 'playlist')) {
+      if (
+        !newUncategorized.some(
+          (c) => (typeof c === 'string' ? c : c.id) === node.id
+        )
+      ) {
+        newUncategorized.push(node)
+      }
+    }
+  })
+
+  return {
+    root: sanitizedRoot,
+    uncategorized: newUncategorized,
+  }
+}
 
 export const useFolderStructure = (
-  channels,
+  items,
   setFolderStructure,
-  folderStructure, // Need the structure itself to check for existing items
-  selectedFolderId
+  folderStructure,
+  selectedFolderId,
+  itemType = 'channel'
 ) => {
   const createFolder = useCallback(
     (name) => {
+      const trimmed = typeof name === 'string' ? name.trim() : ''
+      if (!trimmed) return
+      if (trimmed.length > 200) {
+        alert('Folder name is too long (max 200 characters).')
+        return
+      }
+
+      const findFolder = (nodes) => {
+        for (const node of nodes || []) {
+          if (typeof node === 'string') continue
+          if (node.type === 'folder') {
+            if (node.id === selectedFolderId) return node
+            const found = findFolder(node.children || [])
+            if (found) return found
+          }
+        }
+        return null
+      }
+
+      const currentTarget = selectedFolderId
+        ? findFolder(folderStructure?.root || [])
+        : null
+      const currentSiblings = currentTarget
+        ? currentTarget.children || []
+        : folderStructure?.root || []
+
+      const isDuplicate = currentSiblings.some(
+        (child) =>
+          typeof child !== 'string' &&
+          child.type === 'folder' &&
+          child.name.toLowerCase() === trimmed.toLowerCase()
+      )
+
+      if (isDuplicate) {
+        alert(
+          chrome.i18n.getMessage('errorDuplicateFolder') ||
+            'A folder with this name already exists.'
+        )
+        return
+      }
+
       setFolderStructure((prev) => {
-        let targetFolder = null
-        let targetChildren = prev.root
+        const targetFolder = selectedFolderId ? findFolder(prev.root) : null
+        const targetChildren = targetFolder
+          ? targetFolder.children || []
+          : prev.root
 
-        if (selectedFolderId) {
-          const findFolder = (nodes) => {
-            for (const node of nodes) {
-              if (typeof node === 'string') continue
-              if (node.type === 'folder') {
-                if (node.id === selectedFolderId) return node
-                const found = findFolder(node.children || [])
-                if (found) return found
-              }
-            }
-            return null
-          }
-          targetFolder = findFolder(prev.root)
-          if (targetFolder) {
-            targetChildren = targetFolder.children || []
-          }
-        }
-
-        const isDuplicate = targetChildren.some((child) => {
-          if (typeof child === 'string') return false
-          return (
+        const alreadyExists = targetChildren.some(
+          (child) =>
+            typeof child !== 'string' &&
             child.type === 'folder' &&
-            child.name.toLowerCase() === name.toLowerCase()
-          )
-        })
-
-        if (isDuplicate) {
-          alert(
-            chrome.i18n.getMessage('errorDuplicateFolder') ||
-              'A folder with this name already exists.'
-          )
-          return prev
-        }
+            child.name.toLowerCase() === trimmed.toLowerCase()
+        )
+        if (alreadyExists) return prev
 
         const newFolder = {
-          id: `f_${Date.now()}`,
+          id: `f_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
           type: 'folder',
-          name: name,
+          name: trimmed,
           children: [],
         }
 
@@ -87,225 +544,38 @@ export const useFolderStructure = (
         }
       })
     },
-    [setFolderStructure, selectedFolderId]
+    [setFolderStructure, folderStructure, selectedFolderId]
   )
 
   /**
-   * Move an item (channel or folder) to a new position in the tree
+   * Move an item (channel, playlist, or folder) to a new position in the tree
    * @param {string} dragId ID of the item being moved
    * @param {string} targetId ID of the target item/folder
    * @param {'before' | 'after' | 'inside'} position Position relative to target
    */
   const moveItem = useCallback(
     (dragId, targetId, position = 'inside') => {
-      setFolderStructure((prev) => {
-        let movedItem = null
+      setFolderStructure((prev) =>
+        moveItemInTree(prev, dragId, targetId, position, itemType)
+      )
+    },
+    [setFolderStructure, itemType]
+  )
 
-        // 1. Recursive helper to remove item and return it
-        const removeFromTree = (nodes) => {
-          const result = []
-          for (const node of nodes) {
-            const nodeId = typeof node === 'string' ? node : node.id
-            if (nodeId === dragId) {
-              movedItem = node
-              continue
-            }
-            if (typeof node !== 'string' && node.type === 'folder') {
-              result.push({
-                ...node,
-                children: removeFromTree(node.children || []),
-              })
-            } else {
-              result.push(node)
-            }
-          }
-          return result
-        }
+  const moveItemsBatch = useCallback(
+    (itemIds, targetFolderId) => {
+      setFolderStructure((prev) =>
+        batchMoveItemsInTree(prev, itemIds, targetFolderId, itemType)
+      )
+    },
+    [setFolderStructure, itemType]
+  )
 
-        // 2. Try removing from root/folders or uncategorized
-        let newUncategorized = prev.uncategorized.filter((item) => {
-          const itemId = typeof item === 'string' ? item : item.id
-          if (itemId === dragId) {
-            movedItem = item
-            return false
-          }
-          return true
-        })
-
-        let newRoot = removeFromTree(prev.root)
-
-        if (!movedItem) return prev // Item not found
-
-        // Normalize moved item for storage (ensure channels are just IDs if string, or object if preferred)
-        // We use string IDs for channels in children for compactness
-        const itemToInsert =
-          typeof movedItem === 'string'
-            ? movedItem
-            : movedItem.type === 'channel'
-              ? movedItem.id
-              : movedItem
-
-        // 3. Validation: Cannot drop folder into its own descendant
-        if (
-          typeof itemToInsert !== 'string' &&
-          itemToInsert.type === 'folder'
-        ) {
-          const isDescendant = (parent, searchId) => {
-            if (!parent.children) return false
-            return parent.children.some((child) => {
-              const cId = typeof child === 'string' ? child : child.id
-              if (cId === searchId) return true
-              if (typeof child !== 'string' && child.type === 'folder') {
-                return isDescendant(child, searchId)
-              }
-              return false
-            })
-          }
-          if (isDescendant(itemToInsert, targetId)) return prev
-          if (dragId === targetId) return prev
-        }
-
-        // 4. Insert at target position
-        // Special Case: Move back to Uncategorized (root drop zone)
-        if (targetId === 'root' && position === 'inside') {
-          const id =
-            typeof itemToInsert === 'string' ? itemToInsert : itemToInsert.id
-          const isChannel =
-            typeof itemToInsert === 'string' || itemToInsert.type === 'channel'
-
-          if (isChannel) {
-            if (
-              !newUncategorized.some(
-                (c) => (typeof c === 'string' ? c : c.id) === id
-              )
-            ) {
-              newUncategorized.push({ id, type: 'channel' })
-            }
-            return { root: newRoot, uncategorized: newUncategorized }
-          } else {
-            // Folders move to root list
-            if (!newRoot.some((f) => f.id === itemToInsert.id)) {
-              newRoot.push(itemToInsert)
-            }
-            return { root: newRoot, uncategorized: newUncategorized }
-          }
-        }
-
-        // 5. Insert at target position
-        // Check if target is in Uncategorized
-        const targetIdx = newUncategorized.findIndex(
-          (item) => (typeof item === 'string' ? item : item.id) === targetId
-        )
-
-        if (
-          targetIdx !== -1 &&
-          (position === 'before' || position === 'after')
-        ) {
-          const id =
-            typeof itemToInsert === 'string' ? itemToInsert : itemToInsert.id
-          const isChannel =
-            typeof itemToInsert === 'string' || itemToInsert.type === 'channel'
-
-          if (isChannel) {
-            const newItem = { id, type: 'channel' }
-            const result = [...newUncategorized]
-            result.splice(
-              position === 'before' ? targetIdx : targetIdx + 1,
-              0,
-              newItem
-            )
-            newUncategorized = result
-          } else {
-            // Folders move to root folders list if dropped on an uncategorized channel
-            if (!newRoot.some((f) => f.id === itemToInsert.id)) {
-              newRoot.push(itemToInsert)
-            }
-          }
-        } else if (targetId === 'root' && position === 'after') {
-          // If dropping into root but not at specific position (e.g. empty area)
-          newRoot.push(itemToInsert)
-        } else {
-          // Recursive helper to insert item into tree
-          const insertIntoTree = (nodes) => {
-            const result = []
-            for (let i = 0; i < nodes.length; i++) {
-              const node = nodes[i]
-              const nodeId = typeof node === 'string' ? node : node.id
-
-              // Case A: Target is before/after this node
-              if (
-                nodeId === targetId &&
-                (position === 'before' || position === 'after')
-              ) {
-                if (position === 'before') {
-                  result.push(itemToInsert)
-                  result.push(node)
-                } else {
-                  result.push(node)
-                  result.push(itemToInsert)
-                }
-                continue
-              }
-
-              // Case B: Target is this node (inside position)
-              if (
-                nodeId === targetId &&
-                position === 'inside' &&
-                node.type === 'folder'
-              ) {
-                result.push({
-                  ...node,
-                  expanded: true,
-                  children: [...(node.children || []), itemToInsert],
-                })
-                continue
-              }
-
-              // Case C: Search in children
-              if (typeof node !== 'string' && node.type === 'folder') {
-                result.push({
-                  ...node,
-                  children: insertIntoTree(node.children || []),
-                })
-              } else {
-                result.push(node)
-              }
-            }
-            return result
-          }
-          newRoot = insertIntoTree(newRoot)
-        }
-
-        // 6. SANITIZATION: Ensure root ONLY contains folder objects
-        // If any strings (channel IDs) exist in root, move them to uncategorized
-        const sanitizedRoot = []
-        newRoot.forEach((node) => {
-          if (typeof node === 'string') {
-            if (
-              !newUncategorized.some(
-                (c) => (typeof c === 'string' ? c : c.id) === node
-              )
-            ) {
-              newUncategorized.push({ id: node, type: 'channel' })
-            }
-          } else if (node && node.type === 'folder') {
-            sanitizedRoot.push(node)
-          } else if (node && node.type === 'channel') {
-            if (
-              !newUncategorized.some(
-                (c) => (typeof c === 'string' ? c : c.id) === node.id
-              )
-            ) {
-              newUncategorized.push(node)
-            }
-          }
-        })
-
-        return {
-          root: sanitizedRoot,
-          uncategorized: newUncategorized,
-        }
-      })
+  const updateFolderAppearance = useCallback(
+    (folderId, appearance) => {
+      setFolderStructure((prev) =>
+        updateFolderAppearanceInTree(prev, folderId, appearance)
+      )
     },
     [setFolderStructure]
   )
@@ -313,14 +583,15 @@ export const useFolderStructure = (
   const deleteFolder = useCallback(
     (folderId) => {
       setFolderStructure((prev) => {
-        let recoveredIds = []
+        const recoveredIds = []
         const findAndCollect = (nodes) => {
           nodes.forEach((node) => {
             if (typeof node !== 'string' && node.type === 'folder') {
               if (node.id === folderId) {
                 const collect = (n) => {
                   if (typeof n === 'string') recoveredIds.push(n)
-                  else if (n.type === 'channel') recoveredIds.push(n.id)
+                  else if (n.type === 'channel' || n.type === 'playlist')
+                    recoveredIds.push(n.id)
                   else if (n.type === 'folder' && n.children)
                     n.children.forEach(collect)
                 }
@@ -334,22 +605,28 @@ export const useFolderStructure = (
         findAndCollect(prev.root)
 
         const removeFromTree = (nodes) => {
-          return nodes.filter((node) => {
-            if (typeof node === 'string') return true
-            if (node.id === folderId) return false
-            if (node.type === 'folder') {
-              node.children = removeFromTree(node.children || [])
-              return true
-            }
-            return true
-          })
+          return nodes
+            .filter((node) => typeof node === 'string' || node.id !== folderId)
+            .map((node) => {
+              if (typeof node !== 'string' && node.type === 'folder') {
+                return {
+                  ...node,
+                  children: removeFromTree(node.children || []),
+                }
+              }
+              return node
+            })
         }
 
-        const newRoot = removeFromTree([...prev.root])
-
+        const newRoot = removeFromTree(prev.root)
+        const existingUncatIds = new Set(
+          prev.uncategorized.map((u) => (typeof u === 'string' ? u : u.id))
+        )
         const newUncategorized = [
           ...prev.uncategorized,
-          ...recoveredIds.map((id) => ({ id, type: 'channel' })),
+          ...recoveredIds
+            .filter((id) => !existingUncatIds.has(id))
+            .map((id) => ({ id, type: itemType })),
         ]
 
         return {
@@ -358,12 +635,17 @@ export const useFolderStructure = (
         }
       })
     },
-    [setFolderStructure]
+    [setFolderStructure, itemType]
   )
 
   const renameFolder = useCallback(
     (folderId, currentStructure, newName) => {
-      if (!newName || !newName.trim()) return
+      const trimmed = typeof newName === 'string' ? newName.trim() : ''
+      if (!trimmed) return
+      if (trimmed.length > 200) {
+        alert('Folder name is too long (max 200 characters).')
+        return
+      }
 
       const findFolderAndParent = (nodes, parent = null) => {
         for (const node of nodes) {
@@ -428,125 +710,6 @@ export const useFolderStructure = (
     [setFolderStructure]
   )
 
-  const exportSettings = useCallback((folderStructure) => {
-    const data = JSON.stringify(folderStructure, null, 2)
-    const blob = new Blob([data], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `tubezenify_folders_${new Date()
-      .toISOString()
-      .slice(0, 10)}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }, [])
-
-  const importSettings = useCallback(
-    (jsonString) => {
-      try {
-        if (jsonString.length > 10 * 1024 * 1024) {
-          throw new Error('Import file is too large (max 10MB)')
-        }
-
-        const parsed = JSON.parse(jsonString)
-
-        if (!parsed || typeof parsed !== 'object') {
-          throw new Error('Invalid structure: must be an object')
-        }
-
-        if (!parsed.root || !Array.isArray(parsed.root)) {
-          throw new Error('Invalid structure: missing root array')
-        }
-
-        if (
-          parsed.uncategorized !== undefined &&
-          !Array.isArray(parsed.uncategorized)
-        ) {
-          throw new Error('Invalid structure: uncategorized must be an array')
-        }
-
-        const MAX_DEPTH = 50
-        const validateNode = (node, depth = 0) => {
-          if (depth > MAX_DEPTH) {
-            throw new Error(`Structure too deep (max ${MAX_DEPTH} levels)`)
-          }
-
-          if (typeof node === 'string') {
-            if (node.length > 200) {
-              throw new Error('Invalid channel ID: too long')
-            }
-            return
-          }
-
-          if (!node || typeof node !== 'object') {
-            throw new Error('Invalid node: must be string or object')
-          }
-
-          if (node.type === 'channel') {
-            if (!node.id || typeof node.id !== 'string') {
-              throw new Error('Invalid channel: missing or invalid id')
-            }
-            if (node.id.length > 200) {
-              throw new Error('Invalid channel ID: too long')
-            }
-          } else if (node.type === 'folder') {
-            if (!node.id || typeof node.id !== 'string') {
-              throw new Error('Invalid folder: missing or invalid id')
-            }
-            if (!node.name || typeof node.name !== 'string') {
-              throw new Error('Invalid folder: missing or invalid name')
-            }
-            if (node.name.length > 200) {
-              throw new Error('Invalid folder name: too long')
-            }
-            if (node.children) {
-              if (!Array.isArray(node.children)) {
-                throw new Error('Invalid folder: children must be an array')
-              }
-              if (node.children.length > 10000) {
-                throw new Error('Invalid folder: too many children (max 10000)')
-              }
-              node.children.forEach((child) => validateNode(child, depth + 1))
-            }
-          } else {
-            throw new Error(`Invalid node type: ${node.type}`)
-          }
-        }
-
-        parsed.root.forEach((node) => validateNode(node))
-        if (parsed.uncategorized) {
-          parsed.uncategorized.forEach((node) => validateNode(node))
-        }
-
-        const size = Storage.calculateSize(parsed)
-        if (size > SYNC_LIMIT) {
-          throw new Error(
-            `Import data size (${(size / 1024).toFixed(1)}KB) exceeds sync storage limit (${SYNC_LIMIT / 1024}KB). Please reduce the number of folders or channels.`
-          )
-        }
-
-        if (
-          confirm(
-            chrome.i18n.getMessage('confirmImportSwaps') ||
-              'Importing will overwrite your current folder structure. Continue?'
-          )
-        ) {
-          setFolderStructure({
-            root: parsed.root,
-            uncategorized: parsed.uncategorized || [],
-          })
-          alert(chrome.i18n.getMessage('importSuccess') || 'Import successful!')
-        }
-      } catch (e) {
-        console.error('Import failed', e)
-        alert(chrome.i18n.getMessage('importFailed') + e.message)
-      }
-    },
-    [setFolderStructure]
-  )
-
   const toggleAllFolders = useCallback(
     (expanded) => {
       setFolderStructure((prev) => {
@@ -601,52 +764,52 @@ export const useFolderStructure = (
     [setFolderStructure]
   )
 
-  // Sync: Add newly discovered channels to Uncategorized
+  // Sync: Add newly discovered items to Uncategorized (computed atomically against latest prev)
   useEffect(() => {
-    // 1. Gather all IDs currently in the folder structure
-    const existingIds = new Set()
+    const itemKeys = Object.keys(items || {})
+    if (itemKeys.length === 0) return
 
-    // Helper to traverse
-    const traverse = (nodes) => {
-      if (!nodes) return
-      nodes.forEach((node) => {
-        if (typeof node === 'string') {
-          existingIds.add(node)
-        } else if (node.type === 'channel') {
-          existingIds.add(node.id)
-        } else if (node.type === 'folder') {
-          traverse(node.children)
+    setFolderStructure((prev) => {
+      const existingIds = new Set()
+
+      const traverse = (nodes) => {
+        if (!nodes) return
+        nodes.forEach((node) => {
+          if (typeof node === 'string') {
+            existingIds.add(node)
+          } else if (node.type === 'channel' || node.type === 'playlist') {
+            existingIds.add(node.id)
+          } else if (node.type === 'folder') {
+            traverse(node.children)
+          }
+        })
+      }
+
+      if (prev?.root) traverse(prev.root)
+      if (prev?.uncategorized) traverse(prev.uncategorized)
+
+      const newItems = []
+      itemKeys.forEach((itemId) => {
+        if (!existingIds.has(itemId)) {
+          newItems.push({ id: itemId, type: itemType })
         }
       })
-    }
 
-    if (folderStructure?.root) traverse(folderStructure.root)
-    if (folderStructure?.uncategorized) traverse(folderStructure.uncategorized)
-
-    // 2. Find IDs in 'channels' that are NOT in the structure
-    const newItems = []
-    Object.keys(channels).forEach((channelId) => {
-      if (!existingIds.has(channelId)) {
-        newItems.push({ id: channelId, type: 'channel' })
-      }
-    })
-
-    // 3. Update structure if needed
-    if (newItems.length > 0) {
-      setFolderStructure((prev) => ({
+      if (newItems.length === 0) return prev
+      return {
         ...prev,
         uncategorized: [...(prev.uncategorized || []), ...newItems],
-      }))
-    }
-  }, [channels, folderStructure, setFolderStructure])
+      }
+    })
+  }, [items, folderStructure, setFolderStructure, itemType])
 
   return {
     createFolder,
     moveItem,
+    moveItemsBatch,
+    updateFolderAppearance,
     deleteFolder,
     renameFolder,
-    exportSettings,
-    importSettings,
     toggleAllFolders,
     toggleFolder,
   }

@@ -5,6 +5,47 @@
 // This will likely need to be run in content script context to access DOM/ytcfg
 // or communicated via message passing if called from sidepanel
 
+/**
+ * Extracts a JSON object literal starting at the first '{' in `text`
+ * using string-aware brace matching.
+ */
+export function extractBalancedJsonObject(text) {
+  if (!text || !text.startsWith('{')) return null
+  let depth = 0
+  let inString = false
+  let isEscaped = false
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+    if (inString) {
+      if (isEscaped) {
+        isEscaped = false
+      } else if (ch === '\\') {
+        isEscaped = true
+      } else if (ch === '"') {
+        inString = false
+      }
+      continue
+    }
+
+    if (ch === '"') {
+      inString = true
+    } else if (ch === '{') {
+      depth++
+    } else if (ch === '}') {
+      depth--
+      if (depth === 0) {
+        try {
+          return JSON.parse(text.slice(0, i + 1))
+        } catch (_e) {
+          return null
+        }
+      }
+    }
+  }
+  return null
+}
+
 export const Identity = {
   /**
    * Extract GAIA ID from YouTube DOM (ytcfg)
@@ -38,28 +79,10 @@ export const Identity = {
           const startIdx = text.indexOf(startKey)
           if (startIdx !== -1) {
             const afterKey = text.substring(startIdx + startKey.length).trim()
-            if (afterKey.startsWith('{')) {
-              let braceCount = 0
-              let endIdx = -1
-              for (let i = 0; i < afterKey.length; i++) {
-                if (afterKey[i] === '{') braceCount++
-                else if (afterKey[i] === '}') braceCount--
-                if (braceCount === 0) {
-                  endIdx = i
-                  break
-                }
-              }
-
-              if (endIdx !== -1) {
-                try {
-                  const contextStr = afterKey.substring(0, endIdx + 1)
-                  const context = JSON.parse(contextStr)
-                  const id = getFromContext(context)
-                  if (id) return id
-                } catch (_e) {
-                  // Ignore parse errors
-                }
-              }
+            const context = extractBalancedJsonObject(afterKey)
+            if (context) {
+              const id = getFromContext(context)
+              if (id) return id
             }
           }
         }

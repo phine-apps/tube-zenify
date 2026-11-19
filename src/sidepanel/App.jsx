@@ -5,6 +5,7 @@ import { ZenProvider } from './context/ZenContext'
 import { useZen } from './context/useZen'
 import FolderTree from './components/FolderTree'
 import SearchBar from './components/SearchBar'
+import QuickAccessBar from './components/QuickAccessBar'
 import ErrorBoundary from './components/ErrorBoundary'
 import {
   FolderPlus,
@@ -16,12 +17,20 @@ import {
   X,
   Loader2,
   Info,
+  Tv,
+  ListVideo,
+  ExternalLink,
 } from 'lucide-react'
+import clsx from 'clsx'
 import logo from '../assets/icon-48.png'
 import Modal from './components/Modal'
 
 const MainLayout = () => {
   const {
+    activeTab,
+    setActiveTab,
+    openChannelTab,
+    setOpenChannelTab,
     errorMsg,
     createFolder,
     exportSettings,
@@ -49,7 +58,7 @@ const MainLayout = () => {
       onClick={() => selectFolder(null)}
     >
       {/* Header */}
-      <header className="px-5 py-4 bg-zen-surface/80 backdrop-blur-md border-b border-zen-border flex items-center justify-between sticky top-0 z-40 transition-shadow duration-300">
+      <header className="px-5 py-3.5 bg-zen-surface/80 backdrop-blur-md border-b border-zen-border flex items-center justify-between sticky top-0 z-40 transition-shadow duration-300">
         <h1 className="text-lg font-bold text-gray-800 tracking-tight flex items-center gap-2.5">
           <img src={logo} alt="Logo" className="w-6 h-6 object-contain" />
           <span className="text-zen-text">TubeZenify</span>
@@ -60,7 +69,7 @@ const MainLayout = () => {
               e.stopPropagation()
               setShowCreateModal(true)
             }}
-            className="p-2 text-zen-muted hover:text-zen-accent hover:bg-purple-50 rounded-full transition-colors duration-200"
+            className="p-2 text-zen-muted hover:text-zen-accent hover:bg-purple-50 dark:hover:bg-zen-accent/10 rounded-full transition-colors duration-200"
             title={chrome.i18n.getMessage('folderNew') || 'New Folder'}
           >
             <FolderPlus size={18} />
@@ -91,6 +100,35 @@ const MainLayout = () => {
                   className="absolute right-0 top-full mt-2 w-56 bg-zen-surface rounded-xl shadow-lg border border-zen-border py-2 z-20 flex flex-col overflow-hidden"
                   onClick={(e) => e.stopPropagation()}
                 >
+                  <div className="px-4 py-1.5 text-[10px] font-bold text-zen-muted uppercase tracking-wider">
+                    {chrome.i18n.getMessage('labelPreferences') ||
+                      'Preferences'}
+                  </div>
+                  <div className="px-4 py-1.5 flex items-center justify-between gap-2">
+                    <span className="text-xs text-zen-text flex items-center gap-1.5">
+                      <ExternalLink size={12} className="text-zen-muted" />
+                      {chrome.i18n.getMessage('prefChannelOpenTarget') ||
+                        'Channel link'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setOpenChannelTab(
+                          openChannelTab === 'videos' ? 'home' : 'videos'
+                        )
+                      }
+                      className="px-2 py-0.5 text-[11px] font-semibold rounded-md bg-zen-bg border border-zen-border text-zen-accent hover:bg-zen-accent/10 transition-colors"
+                    >
+                      {openChannelTab === 'videos'
+                        ? chrome.i18n.getMessage('prefChannelTargetVideos') ||
+                          '/videos'
+                        : chrome.i18n.getMessage('prefChannelTargetHome') ||
+                          'Home'}
+                    </button>
+                  </div>
+
+                  <div className="h-px bg-zen-border my-1 mx-2"></div>
+
                   <div className="px-4 py-1.5 text-[10px] font-bold text-zen-muted uppercase tracking-wider">
                     {chrome.i18n.getMessage('labelMaintenance') ||
                       'Maintenance'}
@@ -188,6 +226,41 @@ const MainLayout = () => {
         </div>
       </header>
 
+      {/* Navigation Tabs */}
+      <nav
+        className="px-4 pt-3 pb-1 bg-zen-bg"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="grid grid-cols-2 gap-1 p-1 bg-zen-surface border border-zen-border rounded-xl shadow-2xs">
+          <button
+            type="button"
+            onClick={() => setActiveTab('channels')}
+            className={clsx(
+              'flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all duration-200',
+              activeTab === 'channels'
+                ? 'bg-zen-accent text-white shadow-sm'
+                : 'text-zen-muted hover:text-zen-text hover:bg-zen-bg/60'
+            )}
+          >
+            <Tv size={14} />
+            <span>{chrome.i18n.getMessage('tabChannels') || 'Channels'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('playlists')}
+            className={clsx(
+              'flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all duration-200',
+              activeTab === 'playlists'
+                ? 'bg-zen-accent text-white shadow-sm'
+                : 'text-zen-muted hover:text-zen-text hover:bg-zen-bg/60'
+            )}
+          >
+            <ListVideo size={14} />
+            <span>{chrome.i18n.getMessage('tabPlaylists') || 'Playlists'}</span>
+          </button>
+        </div>
+      </nav>
+
       {errorMsg && (
         <div
           className={`border-b px-4 py-4 text-sm flex flex-col items-center justify-center gap-3 text-center animate-fade-in ${
@@ -270,7 +343,8 @@ const MainLayout = () => {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col px-4 py-4 min-h-0">
+      <main className="flex-1 flex flex-col px-4 py-3 min-h-0">
+        {activeTab === 'playlists' && <QuickAccessBar />}
         <SearchBar />
         <FolderTree />
       </main>
@@ -292,7 +366,7 @@ const MainLayout = () => {
         isOpen={showAboutModal}
         onClose={() => setShowAboutModal(false)}
         title={chrome.i18n.getMessage('aboutTitle') || 'About TubeZenify'}
-        confirmLabel={null} // No confirm button
+        confirmLabel={null}
       >
         <div className="space-y-3 text-sm text-zen-text leading-relaxed p-1">
           <p>
